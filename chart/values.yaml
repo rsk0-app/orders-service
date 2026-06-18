@@ -1,0 +1,12 @@
+replicaCount: 2
+image:
+  repository: ghcr.io/rsk0-app/orders-service
+  tag: "0.3.0"
+service:
+  port: 80
+  targetPort: 8080
+resources:
+  limits: { cpu: 300m, memory: 128Mi }
+  requests: { cpu: 50m, memory: 64Mi }
+env:
+  ENVIRONMENT: production
