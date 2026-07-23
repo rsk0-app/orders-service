@@ -1,19 +1,20 @@
 replicaCount: 2
 image:
   repository: ghcr.io/rsk0-app/orders-service
-  tag: "latest"
+  tag: latest
   pullPolicy: Always
 service:
   port: 80
   targetPort: 8080
 resources:
-  limits: { cpu: 300m, memory: 128Mi }
-  requests: { cpu: 50m, memory: 64Mi }
+  limits:
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
 env:
   ENVIRONMENT: production
-# Failure injector — the stand mutates these to make a revision misbehave for
-# real. FAILURE_MODE: "" (healthy) | errors | latency | crash.
 failure:
-  mode: ""
-  errorRate: "0.5"
-  latencyMs: "1500"
+  mode: crash
+  errorRate: "0"
+  latencyMs: "0"
