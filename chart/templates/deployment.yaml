@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Release.Name }}-orders-service
+  labels:
+    app: orders-service
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -11,11 +13,34 @@ spec:
     metadata:
       labels:
         app: orders-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.service.targetPort }}"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
         - name: orders-service
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - containerPort: {{ .Values.service.targetPort }}
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+          env:
+            - name: ENVIRONMENT
+              value: {{ .Values.env.ENVIRONMENT | quote }}
+            - name: FAILURE_MODE
+              value: {{ .Values.failure.mode | quote }}
+            - name: ERROR_RATE
+              value: {{ .Values.failure.errorRate | quote }}
+            - name: LATENCY_MS
+              value: {{ .Values.failure.latencyMs | quote }}
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 3
+            periodSeconds: 10
           resources:
 {{ toYaml .Values.resources | indent 12 }}

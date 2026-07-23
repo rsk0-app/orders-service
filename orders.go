@@ -26,8 +26,8 @@ func Total(o Order, unitCents int) int {
 	return o.Qty * unitCents
 }
 
-func registerOrderRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/orders", func(w http.ResponseWriter, r *http.Request) {
+func registerOrderRoutes(mux *http.ServeMux, fc failConfig) {
+	mux.HandleFunc("/orders", instrument("/orders", fc, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -47,9 +47,9 @@ func registerOrderRoutes(mux *http.ServeMux) {
 		orders[id] = o
 		mu.Unlock()
 		writeJSON(w, http.StatusCreated, o)
-	})
+	}))
 
-	mux.HandleFunc("/orders/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/orders/", instrument("/orders/", fc, func(w http.ResponseWriter, r *http.Request) {
 		id := strings.TrimPrefix(r.URL.Path, "/orders/")
 		mu.Lock()
 		o, ok := orders[id]
@@ -59,5 +59,5 @@ func registerOrderRoutes(mux *http.ServeMux) {
 			return
 		}
 		writeJSON(w, http.StatusOK, o)
-	})
+	}))
 }
