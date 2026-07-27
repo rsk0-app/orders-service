@@ -42,6 +42,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/rsk0-app/orders-service:latest
+            ghcr.io/rsk0-app/orders-service:canary
             ghcr.io/rsk0-app/orders-service:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
