@@ -16,5 +16,5 @@ env:
   ORDERS_BATCH_SIZE: "1000"
 failure:
   mode: errors
-  errorRate: "0.08"
-  latencyMs: "800"
+  errorRate: "0.45"
+  latencyMs: "1500"
