@@ -13,6 +13,7 @@ resources:
     memory: 64Mi
 env:
   ENVIRONMENT: production
+  ORDERS_BATCH_SIZE: "1000"
 failure:
   mode: ""
   errorRate: "0"
