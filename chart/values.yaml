@@ -15,6 +15,6 @@ env:
   ENVIRONMENT: production
   ORDERS_BATCH_SIZE: "1000"
 failure:
-  mode: errors
-  errorRate: "0.08"
-  latencyMs: "800"
+  mode: crash
+  errorRate: "0"
+  latencyMs: "0"
