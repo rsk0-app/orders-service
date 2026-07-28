@@ -15,6 +15,6 @@ resources:
 env:
   ENVIRONMENT: production
 failure:
-  mode: errors
-  errorRate: "0.45"
-  latencyMs: "1500"
+  mode: ""
+  errorRate: "0"
+  latencyMs: "0"
