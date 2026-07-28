@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-test:
-    runs-on: ubuntu-latest
+    runs-on: arc
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -25,7 +25,7 @@ jobs:
     # Build + push the container only for main (post-merge), never for PRs.
     needs: build-test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: arc
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
