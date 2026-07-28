@@ -34,13 +34,7 @@ spec:
               value: {{ .Values.failure.errorRate | quote }}
             - name: LATENCY_MS
               value: {{ .Values.failure.latencyMs | quote }}
-          readinessProbe:
-            httpGet: { path: /healthz, port: http }
-            initialDelaySeconds: 2
             periodSeconds: 5
-          livenessProbe:
-            httpGet: { path: /healthz, port: http }
-            initialDelaySeconds: 3
             periodSeconds: 10
           resources:
 {{ toYaml .Values.resources | indent 12 }}
