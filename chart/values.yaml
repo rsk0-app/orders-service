@@ -1,4 +1,4 @@
-replicaCount: 2
+replicaCount: 1
 image:
   repository: ghcr.io/rsk0-app/orders-service
   tag: canary
@@ -15,6 +15,6 @@ env:
   ENVIRONMENT: production
   ORDERS_BATCH_SIZE: "1000"
 failure:
-  mode: ""
-  errorRate: "0"
-  latencyMs: "0"
+  mode: errors
+  errorRate: "0.08"
+  latencyMs: "800"
