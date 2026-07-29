@@ -63,6 +63,10 @@ func checkDownstream(ctx context.Context) bool {
 // instrument() wrapper, so the 502 is still counted in http_requests_total.
 func downstreamGate(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// R3: accumulate the real, bounded memory footprint on the business path
+		// only (downstreamGate wraps just the /orders* business handlers, never
+		// /healthz, /readyz or /metrics). Under load RSS plateaus at ~MEM_FOOTPRINT_MB.
+		recordFootprint()
 		if !checkDownstream(r.Context()) {
 			http.Error(w, "downstream dependency unavailable", http.StatusBadGateway)
 			return

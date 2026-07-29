@@ -28,6 +28,8 @@ spec:
           env:
             - name: ENVIRONMENT
               value: {{ .Values.env.ENVIRONMENT | quote }}
+            - name: MEM_FOOTPRINT_MB
+              value: {{ .Values.env.MEM_FOOTPRINT_MB | quote }}
             - name: DATABASE_URL
               value: {{ .Values.database.url | quote }}
             - name: FAILURE_MODE
