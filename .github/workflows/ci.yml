@@ -5,7 +5,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -46,3 +46,50 @@ jobs:
             ghcr.io/rsk0-app/orders-service:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Pin chart image.tag to this commit
+        # GitOps (ArgoCD) deploys .Values.image.tag. Bump it to the immutable
+        # :${sha} we just built+pushed so the cluster gets THIS commit's image,
+        # never a stale mutable :canary. Commit carries [skip ci] so this push
+        # does not retrigger the workflow (no loop). Race-safe against the
+        # stand generator: re-sync onto latest main and re-apply the bump.
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          set -u
+          git config user.name "rsk0-ci"
+          git config user.email "ci@rsk0.app"
+
+          bump_tag() {
+            if command -v yq >/dev/null 2>&1; then
+              SHA="$SHA" yq -i '.image.tag = strenv(SHA)' chart/values.yaml
+            else
+              # Scoped rewrite: only the `tag:` line INSIDE the top-level
+              # `image:` block (inimg resets on any other column-0 key).
+              awk -v sha="$SHA" '
+                /^[^[:space:]#]/ { inimg = ($0 ~ /^image:/) }
+                inimg && /^[[:space:]]+tag:[[:space:]]/ { sub(/tag:[[:space:]].*/, "tag: " sha) }
+                { print }
+              ' chart/values.yaml > chart/values.yaml.tmp && mv chart/values.yaml.tmp chart/values.yaml
+            fi
+          }
+
+          for attempt in 1 2 3; do
+            git fetch origin main || true
+            git reset --hard origin/main
+            bump_tag
+            if git diff --quiet -- chart/values.yaml; then
+              echo "image.tag already $SHA — nothing to bump"
+              exit 0
+            fi
+            git add chart/values.yaml
+            git commit -m "ci: pin chart image.tag to $SHA [skip ci]"
+            if git push origin HEAD:main; then
+              echo "Pushed image.tag bump -> $SHA"
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) — re-syncing and retrying"
+            sleep $((attempt * 2))
+          done
+          echo "WARN: could not push image.tag bump after 3 attempts; leaving main as-is"
+          exit 0
