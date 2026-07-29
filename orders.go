@@ -40,6 +40,17 @@ func registerOrderRoutes(mux *http.ServeMux, fc failConfig) {
 			http.Error(w, "invalid order", http.StatusBadRequest)
 			return
 		}
+		// R2: with a DB, do a REAL INSERT+SELECT against the orders table; a DB
+		// error surfaces as a real 500 (so a broken schema is a real failure).
+		if dbEnabled() {
+			o, err := dbCreateOrder(r.Context(), in.Item, in.Qty)
+			if err != nil {
+				http.Error(w, "order persistence failed", http.StatusInternalServerError)
+				return
+			}
+			writeJSON(w, http.StatusCreated, o)
+			return
+		}
 		mu.Lock()
 		id := fmt.Sprintf("ord_%d", nextID)
 		nextID++
@@ -51,6 +62,19 @@ func registerOrderRoutes(mux *http.ServeMux, fc failConfig) {
 
 	mux.HandleFunc("/orders/", instrument("/orders/", fc, downstreamGate(func(w http.ResponseWriter, r *http.Request) {
 		id := strings.TrimPrefix(r.URL.Path, "/orders/")
+		if dbEnabled() {
+			o, err := dbGetOrder(r.Context(), id)
+			if err != nil {
+				http.Error(w, "order lookup failed", http.StatusInternalServerError)
+				return
+			}
+			if o == nil {
+				http.Error(w, "not found", http.StatusNotFound)
+				return
+			}
+			writeJSON(w, http.StatusOK, o)
+			return
+		}
 		mu.Lock()
 		o, ok := orders[id]
 		mu.Unlock()

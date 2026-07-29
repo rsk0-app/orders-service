@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -13,6 +14,15 @@ import (
 
 func main() {
 	fc := loadFailConfig()
+
+	// R2: connect + apply migrations BEFORE serving. A failing migration exits
+	// non-zero, so a bad migration really breaks the deploy (the modeled risk).
+	if err := initDB(context.Background()); err != nil {
+		log.Fatalf("orders-service: db connect failed: %v", err)
+	}
+	if err := runMigrations(context.Background()); err != nil {
+		log.Fatalf("orders-service: migrations failed: %v", err)
+	}
 
 	// "crash" mode: exit shortly after start so Kubernetes CrashLoopBackOffs the
 	// pod and ArgoCD health goes Degraded — a real hard-failure outcome.
@@ -34,13 +44,18 @@ func main() {
 	mux.HandleFunc("/healthz", instrument("/healthz", failConfig{}, func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	}))
-	// DEEP readiness probe: 200 only if the downstream /healthz responds 2xx
-	// within DEP_TIMEOUT_MS (or if no downstream is configured). A downstream
-	// outage flips this pod NotReady -> ArgoCD Degraded -> visible cascade,
-	// WITHOUT the kubelet killing the pod (that stays on shallow /healthz).
-	// Left uninstrumented (like /metrics) so frequent probes don't pollute
-	// http_requests_total or trip the failure injector.
+	// DEEP readiness probe. R2: 200 only if BOTH (a) the DB check (SELECT 1)
+	// succeeds AND (b) the downstream /readyz responds 2xx within DEP_TIMEOUT_MS
+	// (or no downstream configured). Either failing => 503: a broken DB or a
+	// downstream outage flips this pod NotReady -> ArgoCD Degraded -> the cascade
+	// propagates up the chain, WITHOUT the kubelet killing the pod (that stays on
+	// shallow /healthz). Left uninstrumented (like /metrics) so frequent probes
+	// don't pollute http_requests_total or trip the failure injector.
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		if !dbHealthy(r.Context()) {
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "db unavailable"})
+			return
+		}
 		if checkDownstream(r.Context()) {
 			writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 			return

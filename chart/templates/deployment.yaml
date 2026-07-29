@@ -28,6 +28,8 @@ spec:
           env:
             - name: ENVIRONMENT
               value: {{ .Values.env.ENVIRONMENT | quote }}
+            - name: DATABASE_URL
+              value: {{ .Values.database.url | quote }}
             - name: FAILURE_MODE
               value: {{ .Values.failure.mode | quote }}
             - name: ERROR_RATE
