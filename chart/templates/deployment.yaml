@@ -40,6 +40,9 @@ spec:
               value: {{ .Values.failure.latencyMs | quote }}
             - name: DOWNSTREAM_URL
               value: {{ .Values.downstream.url | quote }}
+            # R5 fan-out: second downstream — inventory-service (leaf).
+            - name: INVENTORY_URL
+              value: {{ .Values.inventory.url | quote }}
             - name: DEP_TIMEOUT_MS
               value: {{ .Values.downstream.timeoutMs | quote }}
           # Liveness stays SHALLOW (/healthz): a downstream outage must not get

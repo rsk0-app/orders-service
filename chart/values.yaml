@@ -26,6 +26,10 @@ database:
 downstream:
   url: http://payments-api-payments-api.rsk0-apps.svc.cluster.local
   timeoutMs: 800
+# R5 fan-out: orders also depends on inventory-service (leaf). /readyz + the
+# business path now gate on payments AND inventory (both /readyz) AND the DB.
+inventory:
+  url: http://inventory-service-inventory-service.rsk0-apps.svc.cluster.local
 failure:
   mode: ""
   errorRate: "0"

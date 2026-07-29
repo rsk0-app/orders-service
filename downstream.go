@@ -1,13 +1,15 @@
 package main
 
-// R1 (realistic-stand): real dependency call for blast-radius.
+// R1 (realistic-stand): real dependency calls for blast-radius.
 //
-// On every BUSINESS request this service calls its downstream's /healthz. If the
-// downstream is unhealthy (non-2xx), times out, or errors, the caller responds
-// 502 — so a downstream failure cascades UP the chain instead of being masked.
+// R5 FAN-OUT: orders-service now depends on TWO downstreams — payments-api
+// (DOWNSTREAM_URL) AND inventory-service (INVENTORY_URL). On every BUSINESS
+// request it calls both; if EITHER is unhealthy (non-2xx), times out, or errors,
+// the caller responds 502 — so a failure in EITHER downstream cascades UP the
+// chain (deeper blast-radius) instead of being masked.
 //
-// DOWNSTREAM_URL empty => no dependency wired; skip the call (behave as before).
-// DEP_TIMEOUT_MS bounds the call so a slow/hung downstream fails fast and never
+// DOWNSTREAM_URL / INVENTORY_URL empty => that dependency is not wired; skip it.
+// DEP_TIMEOUT_MS bounds each call so a slow/hung downstream fails fast and never
 // pins a request goroutine.
 
 import (
@@ -22,6 +24,10 @@ func downstreamURL() string {
 	return os.Getenv("DOWNSTREAM_URL")
 }
 
+func inventoryURL() string {
+	return os.Getenv("INVENTORY_URL")
+}
+
 func depTimeout() time.Duration {
 	ms, _ := strconv.Atoi(os.Getenv("DEP_TIMEOUT_MS"))
 	if ms <= 0 {
@@ -30,16 +36,15 @@ func depTimeout() time.Duration {
 	return time.Duration(ms) * time.Millisecond
 }
 
-// checkDownstream reports whether the downstream /readyz responds 2xx within
-// DEP_TIMEOUT_MS. Empty DOWNSTREAM_URL => skip (always true). Never panics; every
-// error (timeout, DNS, connection refused, non-2xx) collapses to false.
+// checkOne reports whether base's DEEP /readyz responds 2xx within DEP_TIMEOUT_MS.
+// Empty base => skip (always true). Never panics; every error (timeout, DNS,
+// connection refused, non-2xx) collapses to false.
 //
-// We probe the downstream's DEEP /readyz (not shallow /healthz) so readiness
-// CHAINS: if payments is down, orders /readyz goes 503, which makes checkout
-// /readyz go 503 too — the cascade propagates ALL the way up the chain, not one
-// hop. The leaf (payments) serves /readyz shallowly (ready == process up).
-func checkDownstream(ctx context.Context) bool {
-	base := downstreamURL()
+// We probe each downstream's DEEP /readyz (not shallow /healthz) so readiness
+// CHAINS: if a downstream is down, orders /readyz goes 503, which makes checkout
+// /readyz go 503 too — the cascade propagates ALL the way up the chain. The leaf
+// (payments / inventory) serves /readyz as its own deep check (DB, etc.).
+func checkOne(ctx context.Context, base string) bool {
 	if base == "" {
 		return true // no dependency configured — skip
 	}
@@ -58,7 +63,27 @@ func checkDownstream(ctx context.Context) bool {
 	return resp.StatusCode >= 200 && resp.StatusCode < 300
 }
 
-// downstreamGate wraps a business handler: if the downstream is unavailable it
+// checkDownstream reports whether ALL wired downstreams (payments AND inventory)
+// are ready. The two are probed in PARALLEL so their timeouts overlap rather than
+// stack. ANY failing => false => orders /readyz 503 (and, on the business path, a
+// 502). This is the R5 fan-out: orders is NotReady if EITHER payments OR inventory
+// is down.
+func checkDownstream(ctx context.Context) bool {
+	targets := []string{downstreamURL(), inventoryURL()}
+	results := make(chan bool, len(targets))
+	for _, base := range targets {
+		go func(b string) { results <- checkOne(ctx, b) }(base)
+	}
+	ok := true
+	for range targets {
+		if !<-results {
+			ok = false
+		}
+	}
+	return ok
+}
+
+// downstreamGate wraps a business handler: if any downstream is unavailable it
 // short-circuits with 502 (cascade) before the handler runs. It stays INSIDE the
 // instrument() wrapper, so the 502 is still counted in http_requests_total.
 func downstreamGate(next http.HandlerFunc) http.HandlerFunc {
