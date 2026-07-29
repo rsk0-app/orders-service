@@ -1,7 +1,7 @@
 replicaCount: 1
 image:
   repository: ghcr.io/rsk0-app/orders-service
-  tag: "broken-nonexistent-orders-service"
+  tag: canary
   pullPolicy: Always
 service:
   port: 80
