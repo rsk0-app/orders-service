@@ -14,6 +14,11 @@ resources:
 env:
   ENVIRONMENT: production
   ORDERS_BATCH_SIZE: "1000"
+# R1: real downstream dependency (orders-service -> payments-api). A downstream
+# failure makes business requests 502 and flips readiness -> real blast-radius.
+downstream:
+  url: "http://payments-api-payments-api.rsk0-apps.svc.cluster.local"
+  timeoutMs: 800
 failure:
   mode: ""
   errorRate: "0"

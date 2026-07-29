@@ -34,6 +34,19 @@ func main() {
 	mux.HandleFunc("/healthz", instrument("/healthz", failConfig{}, func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	}))
+	// DEEP readiness probe: 200 only if the downstream /healthz responds 2xx
+	// within DEP_TIMEOUT_MS (or if no downstream is configured). A downstream
+	// outage flips this pod NotReady -> ArgoCD Degraded -> visible cascade,
+	// WITHOUT the kubelet killing the pod (that stays on shallow /healthz).
+	// Left uninstrumented (like /metrics) so frequent probes don't pollute
+	// http_requests_total or trip the failure injector.
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		if checkDownstream(r.Context()) {
+			writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
+			return
+		}
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "downstream unavailable"})
+	})
 	registerOrderRoutes(mux, fc)
 
 	port := os.Getenv("PORT")
