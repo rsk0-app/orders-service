@@ -1,7 +1,7 @@
-replicaCount: 2
+replicaCount: 1
 image:
   repository: ghcr.io/rsk0-app/orders-service
-  tag: 57f1dd44e111aabd22a94e8229b2878486de4259
+  tag: canary
   pullPolicy: Always
 service:
   port: 80
@@ -12,22 +12,16 @@ resources:
     memory: 64Mi
   limits:
     cpu: 250m
-    # R3 baseline: 256Mi sits comfortably above the ~150Mi footprint + ~runtime,
-    # so the pod is healthy at baseline but OOMKilled if a risky change lowers
-    # this below the footprint (set_low_memory_limit -> 128Mi).
     memory: 256Mi
 env:
   ENVIRONMENT: production
   ORDERS_BATCH_SIZE: "1000"
-  # R3: real load-driven memory footprint (MiB); RSS plateaus at ~this value.
   MEM_FOOTPRINT_MB: "150"
 database:
   url: postgres://stand:standpass@postgres.rsk0-apps.svc.cluster.local:5432/stand
 downstream:
   url: http://payments-api-payments-api.rsk0-apps.svc.cluster.local
   timeoutMs: 800
-# R5 fan-out: orders also depends on inventory-service (leaf). /readyz + the
-# business path now gate on payments AND inventory (both /readyz) AND the DB.
 inventory:
   url: http://inventory-service-inventory-service.rsk0-apps.svc.cluster.local
 failure:
