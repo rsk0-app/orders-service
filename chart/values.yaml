@@ -18,6 +18,6 @@ downstream:
   url: http://payments-api-payments-api.rsk0-apps.svc.cluster.local
   timeoutMs: 800
 failure:
-  mode: ""
+  mode: crash
   errorRate: "0"
   latencyMs: "0"
