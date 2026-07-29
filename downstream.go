@@ -30,9 +30,14 @@ func depTimeout() time.Duration {
 	return time.Duration(ms) * time.Millisecond
 }
 
-// checkDownstream reports whether the downstream /healthz responds 2xx within
+// checkDownstream reports whether the downstream /readyz responds 2xx within
 // DEP_TIMEOUT_MS. Empty DOWNSTREAM_URL => skip (always true). Never panics; every
 // error (timeout, DNS, connection refused, non-2xx) collapses to false.
+//
+// We probe the downstream's DEEP /readyz (not shallow /healthz) so readiness
+// CHAINS: if payments is down, orders /readyz goes 503, which makes checkout
+// /readyz go 503 too — the cascade propagates ALL the way up the chain, not one
+// hop. The leaf (payments) serves /readyz shallowly (ready == process up).
 func checkDownstream(ctx context.Context) bool {
 	base := downstreamURL()
 	if base == "" {
@@ -41,7 +46,7 @@ func checkDownstream(ctx context.Context) bool {
 	c, cancel := context.WithTimeout(ctx, depTimeout())
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(c, http.MethodGet, base+"/healthz", nil)
+	req, err := http.NewRequestWithContext(c, http.MethodGet, base+"/readyz", nil)
 	if err != nil {
 		return false
 	}
