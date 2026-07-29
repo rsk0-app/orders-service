@@ -1,4 +1,4 @@
-replicaCount: 1
+replicaCount: 2
 image:
   repository: ghcr.io/rsk0-app/orders-service
   tag: canary
@@ -7,10 +7,12 @@ service:
   port: 80
   targetPort: 8080
 resources:
-  limits: {}
   requests:
     cpu: 50m
     memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 128Mi
 env:
   ENVIRONMENT: production
   ORDERS_BATCH_SIZE: "1000"
@@ -20,6 +22,6 @@ downstream:
   url: http://payments-api-payments-api.rsk0-apps.svc.cluster.local
   timeoutMs: 800
 failure:
-  mode: crash
+  mode: ""
   errorRate: "0"
   latencyMs: "0"
