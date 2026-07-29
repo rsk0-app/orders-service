@@ -40,6 +40,13 @@ func registerOrderRoutes(mux *http.ServeMux, fc failConfig) {
 			http.Error(w, "invalid order", http.StatusBadRequest)
 			return
 		}
+		// R5: after the /readyz fan-out gate, make a REAL reserve call to
+		// inventory-service so it gets business traffic + rows. A failure here
+		// cascades as a 502, exactly like a downstream readiness failure.
+		if err := reserveInventory(r.Context()); err != nil {
+			http.Error(w, "downstream dependency unavailable", http.StatusBadGateway)
+			return
+		}
 		// R2: with a DB, do a REAL INSERT+SELECT against the orders table; a DB
 		// error surfaces as a real 500 (so a broken schema is a real failure).
 		if dbEnabled() {

@@ -13,7 +13,9 @@ package main
 // pins a request goroutine.
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -81,6 +83,37 @@ func checkDownstream(ctx context.Context) bool {
 		}
 	}
 	return ok
+}
+
+// reserveInventory makes a REAL business call to inventory-service on the orders
+// business path (after the /readyz fan-out gate): POST INVENTORY_URL/reserve with
+// a minimal body, so inventory gets real traffic + rows (not just /readyz probes).
+// Bounded by the same DEP_TIMEOUT_MS. INVENTORY_URL empty => skip (nil). Any error,
+// timeout, or non-2xx => error, which the caller turns into a 502 so the failure
+// still cascades UP the chain exactly like a readiness-gate failure.
+func reserveInventory(ctx context.Context) error {
+	base := inventoryURL()
+	if base == "" {
+		return nil // inventory not wired — skip
+	}
+	c, cancel := context.WithTimeout(ctx, depTimeout())
+	defer cancel()
+
+	body := bytes.NewBufferString(`{"sku":"stand","qty":1}`)
+	req, err := http.NewRequestWithContext(c, http.MethodPost, base+"/reserve", body)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("inventory reserve: status %d", resp.StatusCode)
+	}
+	return nil
 }
 
 // downstreamGate wraps a business handler: if any downstream is unavailable it
