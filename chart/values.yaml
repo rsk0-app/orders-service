@@ -1,7 +1,7 @@
 replicaCount: 2
 image:
   repository: ghcr.io/rsk0-app/orders-service
-  tag: b32ef349eb8513fe5e815cca8604ef6e47c3e95b
+  tag: 9de1551554486a3375ded0103035ff7ccdb0cce8
   pullPolicy: Always
 service:
   port: 80
