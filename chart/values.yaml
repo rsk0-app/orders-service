@@ -1,4 +1,4 @@
-replicaCount: 1
+replicaCount: 2
 image:
   repository: ghcr.io/rsk0-app/orders-service
   tag: a125d6ba108c5ecc0758857753d3b94411408d16
@@ -12,7 +12,7 @@ resources:
     memory: 64Mi
   limits:
     cpu: 250m
-    memory: 256Mi
+    memory: 64Mi
 env:
   ENVIRONMENT: production
   ORDERS_BATCH_SIZE: "1000"
