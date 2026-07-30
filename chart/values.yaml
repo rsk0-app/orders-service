@@ -1,7 +1,7 @@
 replicaCount: 2
 image:
   repository: ghcr.io/rsk0-app/orders-service
-  tag: 3edaa3d6aeecbfc7f8945bf82f744f4b1da0f467
+  tag: canary
   pullPolicy: Always
 service:
   port: 80
@@ -12,7 +12,7 @@ resources:
     memory: 64Mi
   limits:
     cpu: 250m
-    memory: 64Mi
+    memory: 256Mi
 env:
   ENVIRONMENT: production
   ORDERS_BATCH_SIZE: "1000"
