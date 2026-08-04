@@ -1,4 +1,4 @@
-replicaCount: 2
+replicaCount: 1
 image:
   repository: ghcr.io/rsk0-app/orders-service
   tag: ee370400506ec48094c639ecf165d1afe14fa045
