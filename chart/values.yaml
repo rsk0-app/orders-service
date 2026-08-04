@@ -1,7 +1,7 @@
 replicaCount: 2
 image:
   repository: ghcr.io/rsk0-app/orders-service
-  tag: canary
+  tag: 533ce469967f9db35cc3d0a9c364bd2ae8daacfd
   pullPolicy: Always
 service:
   port: 80
