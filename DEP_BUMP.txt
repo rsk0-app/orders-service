@@ -236,3 +236,4 @@ major bump: dep
 major bump: dep
 patch bump: dep
 patch bump: dep
+major bump: dep
