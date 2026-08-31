@@ -11,8 +11,7 @@ resources:
     cpu: 50m
     memory: 64Mi
   limits:
-    cpu: 250m
-    memory: 64Mi
+    memory: 256Mi
 env:
   ENVIRONMENT: production
   ORDERS_BATCH_SIZE: "1000"
