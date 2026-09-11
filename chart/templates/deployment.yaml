@@ -6,6 +6,8 @@ metadata:
     app: orders-service
 spec:
   replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
   selector:
     matchLabels:
       app: orders-service
