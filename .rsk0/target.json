@@ -1,0 +1,9 @@
+{
+  "organisationId": "f075a8ed-7522-45fd-be0e-99bec0fad9ae",
+  "serviceId": "a6ee0ea1-f840-4dcf-bcc5-7d799352b74e",
+  "environmentId": "ef83eea6-9103-4afc-af9c-ba8e0b41a1e3",
+  "cluster": "default",
+  "namespace": "rsk0-apps",
+  "secretName": "orders-predeploy-database",
+  "secretVersion": "k8s:2b7b4a0b-d773-438b-bd5a-8567e7975add:4620556"
+}

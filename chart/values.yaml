@@ -1,5 +1,6 @@
 replicaCount: 2
 image:
+  digest: sha256:0c66246dc3b98b7ce90449076e76290b3b2c5766bf5dc0b092d44365818b33fc
   repository: ghcr.io/rsk0-app/orders-service
   tag: ac57cb99ac44bebea6482e8fbc8f0661ae46d693
   pullPolicy: Always
@@ -18,7 +19,7 @@ env:
   ORDERS_BATCH_SIZE: "1000"
   MEM_FOOTPRINT_MB: "150"
 database:
-  url: postgres://stand:standpass@postgres.rsk0-apps.svc.cluster.local:5432/stand
+  secretName: orders-predeploy-database
 downstream:
   url: http://payments-api-payments-api.rsk0-apps.svc.cluster.local
   timeoutMs: 800
