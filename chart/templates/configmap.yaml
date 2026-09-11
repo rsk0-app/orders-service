@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-orders-config
+data:
+  ENVIRONMENT: {{ .Values.env.ENVIRONMENT | quote }}
+  MEM_FOOTPRINT_MB: {{ .Values.env.MEM_FOOTPRINT_MB | quote }}
+  FAILURE_MODE: {{ .Values.failure.mode | quote }}
+  ERROR_RATE: {{ .Values.failure.errorRate | quote }}
+  LATENCY_MS: {{ .Values.failure.latencyMs | quote }}
+  DOWNSTREAM_URL: {{ .Values.downstream.url | quote }}
+  INVENTORY_URL: {{ .Values.inventory.url | quote }}
+  DEP_TIMEOUT_MS: {{ .Values.downstream.timeoutMs | quote }}

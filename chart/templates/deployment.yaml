@@ -20,31 +20,58 @@ spec:
     spec:
       containers:
         - name: orders-service
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.repository }}@{{ required "image.digest is required" .Values.image.digest }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
               containerPort: {{ .Values.service.targetPort }}
           env:
             - name: ENVIRONMENT
-              value: {{ .Values.env.ENVIRONMENT | quote }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-orders-config
+                  key: ENVIRONMENT
             - name: MEM_FOOTPRINT_MB
-              value: {{ .Values.env.MEM_FOOTPRINT_MB | quote }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-orders-config
+                  key: MEM_FOOTPRINT_MB
             - name: DATABASE_URL
-              value: {{ .Values.database.url | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "database.secretName is required" .Values.database.secretName | quote }}
+                  key: DATABASE_URL
             - name: FAILURE_MODE
-              value: {{ .Values.failure.mode | quote }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-orders-config
+                  key: FAILURE_MODE
             - name: ERROR_RATE
-              value: {{ .Values.failure.errorRate | quote }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-orders-config
+                  key: ERROR_RATE
             - name: LATENCY_MS
-              value: {{ .Values.failure.latencyMs | quote }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-orders-config
+                  key: LATENCY_MS
             - name: DOWNSTREAM_URL
-              value: {{ .Values.downstream.url | quote }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-orders-config
+                  key: DOWNSTREAM_URL
             # R5 fan-out: second downstream — inventory-service (leaf).
             - name: INVENTORY_URL
-              value: {{ .Values.inventory.url | quote }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-orders-config
+                  key: INVENTORY_URL
             - name: DEP_TIMEOUT_MS
-              value: {{ .Values.downstream.timeoutMs | quote }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-orders-config
+                  key: DEP_TIMEOUT_MS
           # Liveness stays SHALLOW (/healthz): a downstream outage must not get
           # the pod killed. Readiness is DEEP (/readyz): it deep-checks the
           # downstream so an outage flips the pod NotReady -> ArgoCD Degraded.
