@@ -69,13 +69,32 @@ jobs:
           version: v3.17.3
       - name: Render and validate candidate
         env:
+          RSK0_NEGATIVE_PILOT_SHA: ${{ vars.RSK0_NEGATIVE_PILOT_SHA }}
           RSK0_IMAGE_REPOSITORY: ghcr.io/rsk0-app/orders-service
           RSK0_IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           node scripts/verify-producer.mjs
           node scripts/prepare-request.mjs .rsk0/target.json
           namespace=$(node -p 'JSON.parse(require("fs").readFileSync(".rsk0/target.json")).namespace')
-          helm template orders-service chart --namespace "$namespace" -f candidate-values.json > candidate-rendered.yaml
+          if [ -n "$RSK0_NEGATIVE_PILOT_SHA" ] && ! [[ "$RSK0_NEGATIVE_PILOT_SHA" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "invalid negative pilot SHA" >&2; exit 1
+          fi
+          RSK0_CANDIDATE_PROFILE=
+          if [ -n "$RSK0_NEGATIVE_PILOT_SHA" ] && [ "$RSK0_NEGATIVE_PILOT_SHA" = "$GITHUB_SHA" ]; then
+            RSK0_CANDIDATE_PROFILE=negative-readiness
+          fi
+          case "$RSK0_CANDIDATE_PROFILE" in
+            "") release=orders-service; set -- ;;
+            negative-readiness)
+              release=orders-mvp-negative
+              set -- --set appLabel=orders-mvp-negative --set replicaCount=1 \
+                --set readinessPath=/rsk0-intentional-readiness-failure --set progressDeadlineSeconds=60 \
+                --set-string env.MEM_FOOTPRINT_MB=16 --set resources.requests.cpu=25m \
+                --set resources.requests.memory=64Mi --set resources.limits.cpu=100m --set resources.limits.memory=128Mi
+              ;;
+            *) echo "unsupported candidate profile" >&2; exit 1 ;;
+          esac
+          helm template "$release" chart --namespace "$namespace" -f candidate-values.json "$@" > candidate-rendered.yaml
           node scripts/emit-candidate-config.cjs candidate-request.json candidate-rendered.yaml
       - name: Upload candidate configuration
         uses: actions/upload-artifact@v4

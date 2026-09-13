@@ -3,10 +3,10 @@ kind: Service
 metadata:
   name: {{ .Release.Name }}-orders-service
   labels:
-    app: orders-service
+    app: {{ .Values.appLabel | default "orders-service" | quote }}
 spec:
   selector:
-    app: orders-service
+    app: {{ .Values.appLabel | default "orders-service" | quote }}
   ports:
     - name: http
       port: {{ .Values.service.port }}
