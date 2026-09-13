@@ -97,7 +97,7 @@ jobs:
             "") release=orders-service; set -- ;;
             negative-readiness)
               release=orders-mvp-negative
-              set -- --set appLabel=orders-mvp-negative --set replicaCount=1 \
+              set -- --set appLabel=orders-mvp-negative --set-string runtimeApplication=orders-service --set replicaCount=1 \
                 --set readinessPath=/rsk0-intentional-readiness-failure --set progressDeadlineSeconds=60 \
                 --set-string env.MEM_FOOTPRINT_MB=16 --set resources.requests.cpu=25m \
                 --set resources.requests.memory=64Mi --set resources.limits.cpu=100m --set resources.limits.memory=128Mi
