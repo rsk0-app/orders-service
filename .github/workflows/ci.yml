@@ -41,6 +41,8 @@ jobs:
         with:
           context: .
           push: true
+          provenance: ${{ vars.RSK0_POSITIVE_PILOT_SHA == github.sha && 'false' || '' }}
+          labels: ${{ vars.RSK0_POSITIVE_PILOT_SHA == github.sha && format('org.opencontainers.image.revision={0}', github.sha) || '' }}
           tags: |
             ghcr.io/rsk0-app/orders-service:${{ github.sha }}
           cache-from: type=gha
@@ -69,6 +71,7 @@ jobs:
           version: v3.17.3
       - name: Render and validate candidate
         env:
+          RSK0_POSITIVE_PILOT_SHA: ${{ vars.RSK0_POSITIVE_PILOT_SHA }}
           RSK0_NEGATIVE_PILOT_SHA: ${{ vars.RSK0_NEGATIVE_PILOT_SHA }}
           RSK0_REPLACEMENT_PILOT_SHA: ${{ vars.RSK0_REPLACEMENT_PILOT_SHA }}
           RSK0_IMAGE_REPOSITORY: ghcr.io/rsk0-app/orders-service
@@ -83,6 +86,9 @@ jobs:
           if [ -n "$RSK0_REPLACEMENT_PILOT_SHA" ] && ! [[ "$RSK0_REPLACEMENT_PILOT_SHA" =~ ^[a-f0-9]{40}$ ]]; then
             echo "invalid replacement pilot SHA" >&2; exit 1
           fi
+          if [ -n "$RSK0_POSITIVE_PILOT_SHA" ] && ! [[ "$RSK0_POSITIVE_PILOT_SHA" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "invalid positive pilot SHA" >&2; exit 1
+          fi
           RSK0_CANDIDATE_PROFILE=
           if [ -n "$RSK0_NEGATIVE_PILOT_SHA" ] && [ "$RSK0_NEGATIVE_PILOT_SHA" = "$GITHUB_SHA" ]; then
             RSK0_CANDIDATE_PROFILE=negative-readiness
@@ -92,6 +98,12 @@ jobs:
               echo "conflicting pilot profiles" >&2; exit 1
             fi
             RSK0_CANDIDATE_PROFILE=replacement-readiness
+          fi
+          if [ -n "$RSK0_POSITIVE_PILOT_SHA" ] && [ "$RSK0_POSITIVE_PILOT_SHA" = "$GITHUB_SHA" ]; then
+            if [ -n "$RSK0_CANDIDATE_PROFILE" ]; then
+              echo "conflicting pilot profiles" >&2; exit 1
+            fi
+            RSK0_CANDIDATE_PROFILE=positive-telemetry
           fi
           case "$RSK0_CANDIDATE_PROFILE" in
             "") release=orders-service; set -- ;;
@@ -106,6 +118,13 @@ jobs:
               release=orders-mvp-negative
               set -- --set appLabel=orders-mvp-negative --set replicaCount=1 \
                 --set readinessPath=/readyz --set progressDeadlineSeconds=60 \
+                --set-string env.MEM_FOOTPRINT_MB=16 --set resources.requests.cpu=25m \
+                --set resources.requests.memory=64Mi --set resources.limits.cpu=100m --set resources.limits.memory=128Mi
+              ;;
+            positive-telemetry)
+              release=orders-mvp-positive
+              set -- --set appLabel=orders-mvp-positive --set-string runtimeApplication=orders-service --set replicaCount=1 \
+                --set readinessPath=/readyz --set progressDeadlineSeconds=120 \
                 --set-string env.MEM_FOOTPRINT_MB=16 --set resources.requests.cpu=25m \
                 --set resources.requests.memory=64Mi --set resources.limits.cpu=100m --set resources.limits.memory=128Mi
               ;;
