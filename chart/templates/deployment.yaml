@@ -3,24 +3,18 @@ kind: Deployment
 metadata:
   name: {{ .Release.Name }}-orders-service
   labels:
-    app: {{ .Values.appLabel | default "orders-service" }}
-{{- with .Values.runtimeApplication }}
-    rsk0.dev/application: {{ . | quote }}
-{{- end }}
+    app: orders-service
 spec:
-{{- with .Values.progressDeadlineSeconds }}
-  progressDeadlineSeconds: {{ . }}
-{{- end }}
   replicas: {{ .Values.replicaCount }}
   strategy:
     type: RollingUpdate
   selector:
     matchLabels:
-      app: {{ .Values.appLabel | default "orders-service" }}
+      app: orders-service
   template:
     metadata:
       labels:
-        app: {{ .Values.appLabel | default "orders-service" }}
+        app: orders-service
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "{{ .Values.service.targetPort }}"
@@ -92,7 +86,7 @@ spec:
           readinessProbe:
             failureThreshold: 3
             httpGet:
-              path: {{ .Values.readinessPath | default "/readyz" }}
+              path: /readyz
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
