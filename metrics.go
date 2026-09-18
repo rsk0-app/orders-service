@@ -65,6 +65,14 @@ func (r *statusRecorder) WriteHeader(c int) {
 
 // instrument wraps a handler with metrics + the failure injector.
 func instrument(route string, fc failConfig, next http.HandlerFunc) http.HandlerFunc {
+	// Expose supported outcomes before the first request so a scrape can establish
+	// a real zero baseline. Creating a series does not count a request or reset it.
+	for _, code := range []int{http.StatusOK, http.StatusCreated, http.StatusBadRequest,
+		http.StatusNotFound, http.StatusMethodNotAllowed, http.StatusInternalServerError,
+		http.StatusBadGateway} {
+		httpRequests.WithLabelValues(route, strconv.Itoa(code))
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		rec := &statusRecorder{ResponseWriter: w, code: http.StatusOK}
