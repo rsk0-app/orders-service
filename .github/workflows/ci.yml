@@ -22,6 +22,9 @@ jobs:
         run: go test ./...
 
   image:
+    permissions:
+      contents: write
+      packages: write
     # Build + push the container only for main (post-merge), never for PRs.
     needs: build-test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -140,3 +143,16 @@ jobs:
           if-no-files-found: error
           overwrite: false
           retention-days: 7
+
+      - name: Pin chart image.tag to this commit
+        id: rsk0_pin
+        run: node scripts/rsk0-pin-chart.mjs
+      - name: Upload chart commit receipt
+        if: steps.rsk0_pin.outputs.receipt_created == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rsk0-chart-commit-${{ github.run_attempt }}
+          path: chart-commit.json
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 30
