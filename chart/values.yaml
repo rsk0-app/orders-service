@@ -2,7 +2,7 @@ replicaCount: 2
 image:
   digest: sha256:0c66246dc3b98b7ce90449076e76290b3b2c5766bf5dc0b092d44365818b33fc
   repository: ghcr.io/rsk0-app/orders-service
-  tag: 4d9e0c5eb8218914ae6cd0d0830e647e84157a4a
+  tag: canary
   pullPolicy: Always
 service:
   port: 80
@@ -12,6 +12,7 @@ resources:
     cpu: 50m
     memory: 64Mi
   limits:
+    cpu: 250m
     memory: 256Mi
 env:
   ENVIRONMENT: production
