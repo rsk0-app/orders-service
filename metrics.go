@@ -82,6 +82,7 @@ func instrument(route string, fc failConfig, next http.HandlerFunc) http.Handler
 			if rand.Float64() < fc.errorRate {
 				http.Error(rec, "injected failure", http.StatusInternalServerError)
 				record(route, rec.code, start)
+				logServerError(r.Context(), route, rec.code)
 				return
 			}
 		case "latency":
@@ -90,6 +91,7 @@ func instrument(route string, fc failConfig, next http.HandlerFunc) http.Handler
 
 		next(rec, r)
 		record(route, rec.code, start)
+		logServerError(r.Context(), route, rec.code)
 	}
 }
 

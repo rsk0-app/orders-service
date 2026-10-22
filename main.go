@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -14,6 +16,7 @@ import (
 
 func main() {
 	fc := loadFailConfig()
+	shutdownOTel := initOTel(context.Background())
 
 	// R2: connect + apply migrations BEFORE serving. A failing migration exits
 	// non-zero, so a bad migration really breaks the deploy (the modeled risk).
@@ -69,9 +72,21 @@ func main() {
 		port = "8080"
 	}
 	log.Printf("orders-service listening on :%s (FAILURE_MODE=%q)", port, fc.mode)
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
+	srv := &http.Server{Addr: ":" + port, Handler: otelServer(mux)}
+	go func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, syscall.SIGTERM, os.Interrupt)
+		<-sig
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(ctx)
+	}()
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	_ = shutdownOTel(ctx)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
